@@ -9,12 +9,15 @@ from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.types.input_file import BufferedInputFile
 
+
 # =========================
 # НАСТРОЙКИ
 # =========================
 BOT_TOKEN = os.getenv("BOT_TOKEN")  # ← из окружения
 if not BOT_TOKEN:
     raise RuntimeError("Set BOT_TOKEN env var")
+BASE_DIR = Path(__file__).parent
+
 
 QUOTES_DIR = BASE_DIR / "quotes"
 IMAGES_DIR = BASE_DIR / "images"

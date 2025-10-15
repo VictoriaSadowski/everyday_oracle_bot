@@ -199,6 +199,26 @@ async def back_to_main(message: types.Message):
 async def main():
     print("🔮 Бот запущен и готов к магии!")
     await dp.start_polling(bot)
+# --- Render fix: fake web server ---
+import threading
+from aiohttp import web
+
+async def handle(request):
+    return web.Response(text="Bot is alive!")
+
+async def run_webserver():
+    app = web.Application()
+    app.router.add_get("/", handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT", 10000)))
+    await site.start()
+
+def start_webserver():
+    asyncio.run(run_webserver())
+
+threading.Thread(target=start_webserver, daemon=True).start()
+# --- end fix ---
 
 if __name__ == "__main__":
     asyncio.run(main())

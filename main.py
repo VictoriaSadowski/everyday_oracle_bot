@@ -4,29 +4,37 @@ import random
 import asyncio
 from pathlib import Path
 from hashlib import sha1
+from typing import Optional
+
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.types.input_file import BufferedInputFile
 
-
 # =========================
 # НАСТРОЙКИ
 # =========================
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # ← из окружения
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # ← из окружения Render
 if not BOT_TOKEN:
-    raise RuntimeError("Set BOT_TOKEN env var")
-BASE_DIR = Path(__file__).parent
+    print("❌ BOT_TOKEN не найден в переменных окружения (Render → Environment).")
 
+BASE_DIR = Path(__file__).parent.resolve()
 
 QUOTES_DIR = BASE_DIR / "quotes"
 IMAGES_DIR = BASE_DIR / "images"
 STATE_FILE = BASE_DIR / "state.json"
 
+# создадим папки, если они вдруг не залиты
+for p in (QUOTES_DIR, IMAGES_DIR):
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        print(f"⚠️ Не удалось создать {p}: {e}")
+
 RECENT_N = 20  # глубина анти-повтора
 IMG_EXTS = {".jpg", ".jpeg", ".png"}
 
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=BOT_TOKEN) if BOT_TOKEN else None
 dp = Dispatcher()
 
 # =========================
@@ -36,12 +44,15 @@ def _load_state() -> dict:
     if STATE_FILE.exists():
         try:
             return json.loads(STATE_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"⚠️ Ошибка чтения state.json: {e}")
     return {}
 
 def _save_state(st: dict):
-    STATE_FILE.write_text(json.dumps(st, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        STATE_FILE.write_text(json.dumps(st, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        print(f"⚠️ Ошибка записи state.json: {e}")
 
 def _hash_text(s: str) -> str:
     return sha1(s.encode("utf-8")).hexdigest()[:16]
@@ -58,11 +69,12 @@ def _remember(st: dict, user_id: int, cat_key: str, key: str):
         del bucket[: len(bucket) - RECENT_N]
 
 def pick_non_repeating(user_id: int, cat_key: str, items: list[str]) -> str:
+    items = items or ["(нет данных)"]
     st = _load_state()
     seen = set(_user_bucket(st, user_id, cat_key))
     candidates = [x for x in items if _hash_text(x) not in seen]
     if not candidates:
-        st[str(user_id)][cat_key] = []
+        st.setdefault(str(user_id), {})[cat_key] = []
         _save_state(st)
         candidates = items[:]
     choice = random.choice(candidates)
@@ -70,29 +82,41 @@ def pick_non_repeating(user_id: int, cat_key: str, items: list[str]) -> str:
     _save_state(st)
     return choice
 
-def pick_image_non_repeating(user_id: int, cat_key: str, folder: Path) -> BufferedInputFile | None:
-    imgs = [p for p in folder.iterdir() if p.suffix.lower() in IMG_EXTS and p.is_file()]
+def pick_image_non_repeating(user_id: int, cat_key: str, folder: Path) -> Optional[BufferedInputFile]:
+    try:
+        imgs = [p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in IMG_EXTS]
+    except Exception as e:
+        print(f"⚠️ Не удалось прочитать папку {folder}: {e}")
+        imgs = []
     if not imgs:
         return None
     st = _load_state()
     last_key = f"{cat_key}__last_image"
-    last = _load_state().get(str(user_id), {}).get(last_key)
+    last = st.get(str(user_id), {}).get(last_key)
     choices = [p for p in imgs if p.name != last] or imgs
     img = random.choice(choices)
     u = st.setdefault(str(user_id), {})
     u[last_key] = img.name
     _save_state(st)
-    return BufferedInputFile(img.read_bytes(), filename=img.name)
+    try:
+        return BufferedInputFile(img.read_bytes(), filename=img.name)
+    except Exception as e:
+        print(f"⚠️ Не удалось прочитать файл изображения {img}: {e}")
+        return None
 
 # =========================
 # ЗАГРУЗКА ЦИТАТ
 # =========================
 def load_quotes(file_path: Path) -> list[str]:
-    if not file_path.exists():
-        print(f"⚠️  Файл {file_path.name} не найден.")
-        return ["(нет цитат)"]
-    lines = [line.strip() for line in file_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    return lines or ["(файл пуст)"]
+    try:
+        if not file_path.exists():
+            print(f"⚠️ Файл {file_path} не найден.")
+            return ["(нет цитат)"]
+        lines = [line.strip() for line in file_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        return lines or ["(файл пуст)"]
+    except Exception as e:
+        print(f"⚠️ Ошибка чтения {file_path}: {e}")
+        return ["(ошибка чтения файла)"]
 
 # =========================
 # КЛАВИАТУРА
@@ -111,8 +135,7 @@ keyboard = ReplyKeyboardMarkup(
 @dp.message(Command("start"))
 async def start(message: types.Message):
     await message.answer(
-        "Привет! 💫 Я твой ежедневный оракул.\n"
-        "Выбери категорию:",
+        "Привет! 💫 Я твой ежедневный оракул.\nВыбери категорию:",
         reply_markup=keyboard
     )
 
@@ -121,7 +144,6 @@ async def start(message: types.Message):
 # =========================
 @dp.message(F.text == "🎬 Movies")
 async def movies_category(message: types.Message):
-    # подкатегории
     sub_kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Supernatural"), KeyboardButton(text="Friends")],
@@ -138,87 +160,5 @@ async def movie_sub(message: types.Message):
     quotes_file = QUOTES_DIR / "movies.txt"
     all_lines = load_quotes(quotes_file)
     lines = [l.split("]", 1)[1].strip() for l in all_lines if l.startswith(f"[{tag}]")]
-
     quote = pick_non_repeating(message.from_user.id, f"movies:{tag}", lines)
-    folder = IMAGES_DIR / "movies" / tag
-    photo = pick_image_non_repeating(message.from_user.id, f"movies:{tag}", folder)
-    if photo:
-        await message.answer_photo(photo=photo, caption=f"🎬 {quote}")
-    else:
-        await message.answer(f"🎬 {quote}")
-
-# =========================
-# SONGS
-# =========================
-@dp.message(F.text == "🎵 Songs")
-async def songs_category(message: types.Message):
-    lines = load_quotes(QUOTES_DIR / "songs.txt")
-    quote = pick_non_repeating(message.from_user.id, "songs", lines)
-    folder = IMAGES_DIR / "songs"
-    photo = pick_image_non_repeating(message.from_user.id, "songs", folder)
-    if photo:
-        await message.answer_photo(photo=photo, caption=f"🎵 {quote}")
-    else:
-        await message.answer(f"🎵 {quote}")
-
-# =========================
-# AFFIRMATIONS
-# =========================
-@dp.message(F.text == "✨ Affirmations")
-async def affirmations_category(message: types.Message):
-    lines = load_quotes(QUOTES_DIR / "affirmations.txt")
-    quote = pick_non_repeating(message.from_user.id, "affirmations", lines)
-    folder = IMAGES_DIR / "affirmations"
-    photo = pick_image_non_repeating(message.from_user.id, "affirmations", folder)
-    if photo:
-        await message.answer_photo(photo=photo, caption=f"✨ {quote}")
-    else:
-        await message.answer(f"✨ {quote}")
-
-# =========================
-# RANDOM
-# =========================
-@dp.message(F.text == "🎲 Random")
-async def random_category(message: types.Message):
-    cat = random.choice(["songs", "affirmations"])
-    if cat == "songs":
-        await songs_category(message)
-    else:
-        await affirmations_category(message)
-
-# =========================
-# НАЗАД
-# =========================
-@dp.message(F.text == "⬅️ Назад")
-async def back_to_main(message: types.Message):
-    await message.answer("Выбери категорию:", reply_markup=keyboard)
-
-# =========================
-# ЗАПУСК
-# =========================
-async def main():
-    print("🔮 Бот запущен и готов к магии!")
-    await dp.start_polling(bot)
-# --- Render fix: fake web server ---
-import threading
-from aiohttp import web
-
-async def handle(request):
-    return web.Response(text="Bot is alive!")
-
-async def run_webserver():
-    app = web.Application()
-    app.router.add_get("/", handle)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT", 10000)))
-    await site.start()
-
-def start_webserver():
-    asyncio.run(run_webserver())
-
-threading.Thread(target=start_webserver, daemon=True).start()
-# --- end fix ---
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    folder = IMAGES_DIR_

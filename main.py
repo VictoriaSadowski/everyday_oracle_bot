@@ -161,4 +161,106 @@ async def movie_sub(message: types.Message):
     all_lines = load_quotes(quotes_file)
     lines = [l.split("]", 1)[1].strip() for l in all_lines if l.startswith(f"[{tag}]")]
     quote = pick_non_repeating(message.from_user.id, f"movies:{tag}", lines)
-    folder = IMAGES_DIR_
+    folder = IMAGES_DIR / "movies" / tag
+    photo = pick_image_non_repeating(message.from_user.id, f"movies:{tag}", folder)
+    if photo:
+        await message.answer_photo(photo=photo, caption=f"🎬 {quote}")
+    else:
+        await message.answer(f"🎬 {quote}")
+
+# =========================
+# SONGS
+# =========================
+@dp.message(F.text == "🎵 Songs")
+async def songs_category(message: types.Message):
+    lines = load_quotes(QUOTES_DIR / "songs.txt")
+    quote = pick_non_repeating(message.from_user.id, "songs", lines)
+    folder = IMAGES_DIR / "songs"
+    photo = pick_image_non_repeating(message.from_user.id, "songs", folder)
+    if photo:
+        await message.answer_photo(photo=photo, caption=f"🎵 {quote}")
+    else:
+        await message.answer(f"🎵 {quote}")
+
+# =========================
+# AFFIRMATIONS
+# =========================
+@dp.message(F.text == "✨ Affirmations")
+async def affirmations_category(message: types.Message):
+    lines = load_quotes(QUOTES_DIR / "affirmations.txt")
+    quote = pick_non_repeating(message.from_user.id, "affirmations", lines)
+    folder = IMAGES_DIR / "affirmations"
+    photo = pick_image_non_repeating(message.from_user.id, "affirmations", folder)
+    if photo:
+        await message.answer_photo(photo=photo, caption=f"✨ {quote}")
+    else:
+        await message.answer(f"✨ {quote}")
+
+# =========================
+# RANDOM
+# =========================
+@dp.message(F.text == "🎲 Random")
+async def random_category(message: types.Message):
+    cat = random.choice(["songs", "affirmations"])
+    if cat == "songs":
+        await songs_category(message)
+    else:
+        await affirmations_category(message)
+
+# =========================
+# НАЗАД
+# =========================
+@dp.message(F.text == "⬅️ Назад")
+async def back_to_main(message: types.Message):
+    await message.answer("Выбери категорию:", reply_markup=keyboard)
+
+# =========================
+# Фейковый веб-сервер для Render (порт-скан)
+# =========================
+import threading
+from aiohttp import web
+
+async def _root(request):
+    return web.Response(text="Bot is alive!")
+
+async def _health(request):
+    return web.Response(text="OK")
+
+async def _run_webserver():
+    app = web.Application()
+    app.router.add_get("/", _root)
+    app.router.add_get("/health", _health)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.getenv("PORT", "10000"))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"🌐 HTTP server started on port {port}")
+
+def _start_webserver_thread():
+    asyncio.run(_run_webserver())
+
+# =========================
+# ЗАПУСК
+# =========================
+async def main():
+    if not BOT_TOKEN:
+        # держим процесс живым для Render, чтобы деплой не падал
+        print("⚠️ Нет BOT_TOKEN — бот не подключится к Telegram, но веб-сервер работает.")
+        while True:
+            await asyncio.sleep(60)
+
+    print("🔮 Бот запущен и готов к магии!")
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    # 1) сначала поднимем веб-сервер (чтобы Render увидел открытый порт сразу)
+    threading.Thread(target=_start_webserver_thread, daemon=True).start()
+    # 2) затем запускаем бота; в случае крэша — перезапуск через 5 сек
+    while True:
+        try:
+            asyncio.run(main())
+        except Exception as e:
+            print(f"💥 Критическая ошибка: {e}. Перезапуск через 5 сек.")
+            import time
+            time.sleep(5)

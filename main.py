@@ -215,32 +215,6 @@ async def back_to_main(message: types.Message):
     await message.answer("Выбери категорию:", reply_markup=keyboard)
 
 # =========================
-# Фейковый веб-сервер для Render (порт-скан)
-# =========================
-import threading
-from aiohttp import web
-
-async def _root(request):
-    return web.Response(text="Bot is alive!")
-
-async def _health(request):
-    return web.Response(text="OK")
-
-async def _run_webserver():
-    app = web.Application()
-    app.router.add_get("/", _root)
-    app.router.add_get("/health", _health)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    port = int(os.getenv("PORT", "10000"))
-    site = web.TCPSite(runner, "0.0.0.0", port)
-    await site.start()
-    print(f"🌐 HTTP server started on port {port}")
-
-def _start_webserver_thread():
-    asyncio.run(_run_webserver())
-
-# =========================
 # ЗАПУСК
 # =========================
 async def main():

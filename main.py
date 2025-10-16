@@ -226,15 +226,7 @@ async def main():
 
     print("🔮 Бот запущен и готов к магии!")
     await dp.start_polling(bot)
-
 if __name__ == "__main__":
-    # 1) сначала поднимем веб-сервер (чтобы Render увидел открытый порт сразу)
-    threading.Thread(target=_start_webserver_thread, daemon=True).start()
-    # 2) затем запускаем бота; в случае крэша — перезапуск через 5 сек
-    while True:
-        try:
-            asyncio.run(main())
-        except Exception as e:
-            print(f"💥 Критическая ошибка: {e}. Перезапуск через 5 сек.")
-            import time
-            time.sleep(5)
+    asyncio.run(main())
+
+

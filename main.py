@@ -122,13 +122,12 @@ def load_quotes(file_path: Path) -> list[str]:
 # КЛАВИАТУРА
 # =========================
 keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="🎬 Movies"), KeyboardButton(text="🎵 Songs")],
-        [KeyboardButton(text="✨ Affirmations"), KeyboardButton(text="🎲 Random")]
-    ],
-    resize_keyboard=True
-)
-
+     [KeyboardButton(text="Supernatural"), KeyboardButton(text="Friends")],
+            [KeyboardButton(text="Rebelde Way"), KeyboardButton(text="Disney")],
+            [KeyboardButton(text="⬅️ Назад")]
+        ],
+        resize_keyboard=True
+   
 # =========================
 # /start
 # =========================
@@ -167,7 +166,40 @@ async def movie_sub(message: types.Message):
         await message.answer_photo(photo=photo, caption=f"🎬 {quote}")
     else:
         await message.answer(f"🎬 {quote}")
+@dp.message(F.text == "Disney")
+async def disney_category(message: types.Message):
+    movies = [
+        "snow_white",
+        "cinderella",
+        "the_little_mermaid",
+        "aladdin",
+        "sleeping_beauty",
+        "beauty_and_the_beast",
+        "the_aristocats",
+        "dumbo",
+        "bambi",
+        "the_lion_king",
+        "lilo_and_stitch",
+        "toy_story",
+        "mulan"
+    ]
 
+    movie = random.choice(movies)
+    quotes_file = QUOTES_DIR / "disney.txt"
+    all_lines = load_quotes(quotes_file)
+    lines = [l.split("]", 1)[1].strip() for l in all_lines if l.startswith(f"[{movie}]")]
+
+    quote = pick_non_repeating(message.from_user.id, f"disney:{movie}", lines)
+    folder = IMAGES_DIR / "disney" / movie
+    photo = pick_image_non_repeating(message.from_user.id, f"disney:{movie}", folder)
+
+    # делаем подпись более человеческой
+    movie_name = movie.replace("_", " ").title()
+
+    if photo:
+        await message.answer_photo(photo=photo, caption=f"🎠 {movie_name}\n{quote}")
+    else:
+        await message.answer(f"🎠 {movie_name}\n{quote}")
 # =========================
 # SONGS
 # =========================

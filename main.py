@@ -125,7 +125,7 @@ keyboard = ReplyKeyboardMarkup(
      [KeyboardButton(text="Supernatural"), KeyboardButton(text="Friends")],
             [KeyboardButton(text="Rebelde Way"), KeyboardButton(text="Disney")],
             [KeyboardButton(text="⬅️ Назад")]
-        ],
+),
         resize_keyboard=True
    
 # =========================

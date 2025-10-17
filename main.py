@@ -195,7 +195,7 @@ async def disney_category(message: types.Message):
     lines = [l.split("]", 1)[1].strip() for l in all_lines if l.startswith(f"[{movie}]")]
 
     quote = pick_non_repeating(message.from_user.id, f"disney:{movie}", lines)
-    folder = IMAGES_DIR / "disney" / movie
+    folder = IMAGES_DIR / "movies" / "disney" / movie
     photo = pick_image_non_repeating(message.from_user.id, f"disney:{movie}", folder)
 
     movie_name = movie.replace("_", " ").title()

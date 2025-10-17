@@ -122,12 +122,13 @@ def load_quotes(file_path: Path) -> list[str]:
 # КЛАВИАТУРА
 # =========================
 keyboard = ReplyKeyboardMarkup(
-     [KeyboardButton(text="Supernatural"), KeyboardButton(text="Friends")],
-            [KeyboardButton(text="Rebelde Way"), KeyboardButton(text="Disney")],
-            [KeyboardButton(text="⬅️ Назад")]
-),
-        resize_keyboard=True
-   
+    keyboard=[
+        [KeyboardButton(text="🎬 Movies"), KeyboardButton(text="🎵 Songs")],
+        [KeyboardButton(text="✨ Affirmations"), KeyboardButton(text="🎲 Random")]
+    ],
+    resize_keyboard=True
+)
+
 # =========================
 # /start
 # =========================
@@ -146,7 +147,7 @@ async def movies_category(message: types.Message):
     sub_kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Supernatural"), KeyboardButton(text="Friends")],
-            [KeyboardButton(text="Rebelde Way")],
+            [KeyboardButton(text="Rebelde Way"), KeyboardButton(text="Disney")],
             [KeyboardButton(text="⬅️ Назад")]
         ],
         resize_keyboard=True
@@ -166,6 +167,10 @@ async def movie_sub(message: types.Message):
         await message.answer_photo(photo=photo, caption=f"🎬 {quote}")
     else:
         await message.answer(f"🎬 {quote}")
+
+# =========================
+# DISNEY
+# =========================
 @dp.message(F.text == "Disney")
 async def disney_category(message: types.Message):
     movies = [
@@ -193,13 +198,13 @@ async def disney_category(message: types.Message):
     folder = IMAGES_DIR / "disney" / movie
     photo = pick_image_non_repeating(message.from_user.id, f"disney:{movie}", folder)
 
-    # делаем подпись более человеческой
     movie_name = movie.replace("_", " ").title()
 
     if photo:
         await message.answer_photo(photo=photo, caption=f"🎠 {movie_name}\n{quote}")
     else:
         await message.answer(f"🎠 {movie_name}\n{quote}")
+
 # =========================
 # SONGS
 # =========================
@@ -251,14 +256,12 @@ async def back_to_main(message: types.Message):
 # =========================
 async def main():
     if not BOT_TOKEN:
-        # держим процесс живым для Render, чтобы деплой не падал
         print("⚠️ Нет BOT_TOKEN — бот не подключится к Telegram, но веб-сервер работает.")
         while True:
             await asyncio.sleep(60)
 
     print("🔮 Бот запущен и готов к магии!")
     await dp.start_polling(bot)
+
 if __name__ == "__main__":
     asyncio.run(main())
-
-

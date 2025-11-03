@@ -138,72 +138,70 @@ async def start(message: types.Message):
         "Привет! 💫 Я твой ежедневный оракул.\nВыбери категорию:",
         reply_markup=keyboard
     )
+# =========================
+# MOVIES (всё в одной кнопке)
+# =========================
 
-# =========================
-# MOVIES
-# =========================
+DISNEY_MOVIES = [
+    "snow_white",
+    "cinderella",
+    "the_little_mermaid",
+    "aladdin",
+    "sleeping_beauty",
+    "beauty_and_the_beast",
+    "the_aristocats",
+    "dumbo",
+    "bambi",
+    "the_lion_king",
+    "lilo_and_stitch",
+    "toy_story",
+    "mulan",
+]
+
+SERIES_TAGS = ["supernatural", "friends", "rebelde_way"]
+
 @dp.message(F.text == "🎬 Movies")
-async def movies_category(message: types.Message):
-    sub_kb = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="Supernatural"), KeyboardButton(text="Friends")],
-            [KeyboardButton(text="Rebelde Way"), KeyboardButton(text="Disney")],
-            [KeyboardButton(text="⬅️ Назад")]
-        ],
-        resize_keyboard=True
-    )
-    await message.answer("Выбери подкатегорию 🎥", reply_markup=sub_kb)
+async def movies_one_button(message: types.Message):
+    """
+    Одна кнопка для всех фильмов и мультфильмов.
+    Бот выбирает случайно — сериал или диснеевский мульт,
+    и подбирает к цитате соответствующую картинку.
+    """
+    source = random.choices(["series", "disney"], weights=[3, 1], k=1)[0]  # Disney чуть реже
 
-@dp.message(F.text.in_({"Supernatural", "Friends", "Rebelde Way"}))
-async def movie_sub(message: types.Message):
-    tag = message.text.lower().replace(" ", "_")
-    quotes_file = QUOTES_DIR / "movies.txt"
-    all_lines = load_quotes(quotes_file)
-    lines = [l.split("]", 1)[1].strip() for l in all_lines if l.startswith(f"[{tag}]")]
-    quote = pick_non_repeating(message.from_user.id, f"movies:{tag}", lines)
-    folder = IMAGES_DIR / "movies" / tag
-    photo = pick_image_non_repeating(message.from_user.id, f"movies:{tag}", folder)
-    if photo:
-        await message.answer_photo(photo=photo, caption=f"🎬 {quote}")
-    else:
-        await message.answer(f"🎬 {quote}")
+    if source == "series":
+        tag = random.choice(SERIES_TAGS)
+        quotes_file = QUOTES_DIR / "movies.txt"
+        all_lines = load_quotes(quotes_file)
+        lines = [l.split("]", 1)[1].strip() for l in all_lines if l.startswith(f"[{tag}]")]
+        quote = pick_non_repeating(message.from_user.id, f"movies:{tag}", lines)
 
-# =========================
-# DISNEY
-# =========================
-@dp.message(F.text == "Disney")
-async def disney_category(message: types.Message):
-    movies = [
-        "snow_white",
-        "cinderella",
-        "the_little_mermaid",
-        "aladdin",
-        "sleeping_beauty",
-        "beauty_and_the_beast",
-        "the_aristocats",
-        "dumbo",
-        "bambi",
-        "the_lion_king",
-        "lilo_and_stitch",
-        "toy_story",
-        "mulan"
-    ]
+        folder = IMAGES_DIR / "movies" / tag
+        photo = pick_image_non_repeating(message.from_user.id, f"movies:{tag}", folder)
 
-    movie = random.choice(movies)
+        name = tag.replace("_", " ").title()
+        if photo:
+            await message.answer_photo(photo=photo, caption=f"🎬 {name}\n{quote}")
+        else:
+            await message.answer(f"🎬 {name}\n{quote}")
+        return
+
+    # Disney
+    movie = random.choice(DISNEY_MOVIES)
     quotes_file = QUOTES_DIR / "disney.txt"
     all_lines = load_quotes(quotes_file)
     lines = [l.split("]", 1)[1].strip() for l in all_lines if l.startswith(f"[{movie}]")]
 
     quote = pick_non_repeating(message.from_user.id, f"disney:{movie}", lines)
-    folder = IMAGES_DIR / "movies" / "disney" / movie
+    folder = IMAGES_DIR / "movies" / "disney" / movie  # как в твоей структуре GitHub
     photo = pick_image_non_repeating(message.from_user.id, f"disney:{movie}", folder)
 
     movie_name = movie.replace("_", " ").title()
-
     if photo:
         await message.answer_photo(photo=photo, caption=f"🎠 {movie_name}\n{quote}")
     else:
         await message.answer(f"🎠 {movie_name}\n{quote}")
+
 
 # =========================
 # SONGS

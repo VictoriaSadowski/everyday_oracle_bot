@@ -158,7 +158,7 @@ DISNEY_MOVIES = [
     "mulan",
 ]
 
-SERIES_TAGS = ["supernatural", "friends", "rebelde_way"]
+SERIES_TAGS = ["supernatural", "friends", "rebelde_way", "office"]
 
 @dp.message(F.text == "🎬 Movies")
 async def movies_one_button(message: types.Message):

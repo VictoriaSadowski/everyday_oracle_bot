@@ -47,3 +47,13 @@
 [rebelde_way] Самая смелая девушка может изменить мир
 [rebelde_way] Не позволяй никому определять твою ценность
 
+[office] Why are you the way that you are?
+[office] I love inside jokes. I’d love to be a part of one someday.
+[office] I just want to lie on the beach and eat hot dogs. That’s all I’ve ever wanted
+[office] Do I need to be liked? Absolutely not. I like to be liked. I enjoy being liked.
+[office] I don’t hate it. I just don’t like it at all and it’s terrible.
+[office] I am running away from my responsibilities. And it feels good.
+[office] And I knew exactly what to do. But in a much more real sense, I had no idea what to do.
+[office] I got six numbers. One more and it would have been a complete phone number.
+[office] I talk a lot, so I’ve learned to tune myself out.
+[office] I guess I’ve been working so hard, I forgot what it’s like to be hardly working.
